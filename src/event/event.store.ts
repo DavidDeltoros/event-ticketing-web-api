@@ -17,6 +17,10 @@ class EventStore {
     return e;
   }
 
+  status(id: string): string | undefined {
+    return this.data.get(id)?.state;
+  }
+
   update(id: string, patch: Partial<Event>): Event | undefined {
     const current = this.data.get(id);
     if (!current) return undefined;

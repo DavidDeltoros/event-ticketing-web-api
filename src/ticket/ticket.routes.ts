@@ -8,6 +8,24 @@ import { Ticket, BuyTicketSchema, BuyTicketDto} from "./ticket.types";
 
 export const ticketRouter = Router();
 
+function get_ticket_price(sold_events: number, initial_price: number, bulk: number){
+  let price = initial_price;
+  let additional_discount = 1;
+
+  if ((bulk >=3) && (bulk<=5)){ 
+    additional_discount = 0.9;
+  }
+  if ((bulk >=6) && (bulk<=10)){ 
+    additional_discount = 0.85;
+  }
+      // discount logic
+      if (sold_events <= 5) {
+        price = initial_price * 0.4; // 60% off → pay 40%
+      } else if (sold_events <= 15) {
+        price = initial_price * 0.7; // 30% off → pay 70%
+      }      
+      return price * additional_discount;
+}
 
 // GET /api/events
 ticketRouter.get("/", (_req: Request, res: Response) => {
@@ -43,27 +61,30 @@ ticketRouter.post(
     }
     const item = eventStore.get(dto.eventId);
     if (!item) return next(new HttpError(404, "Event not found"));
+    if (item.state == "DRAFT") return next(new HttpError(404, "Event not published"));
+    if (item.state == "CANCELLED") return next(new HttpError(404, "Event canceleed"));
     if (!item.capacity) return  next(new HttpError(400, "No Capasity for event"));
     if (!item.ticketPrice) return  next(new HttpError(400, "No ticket price for event"));
     const ticket_count = ticketStore.get_event_list(dto.eventId)
-    console.log(ticket_count);
-    console.log(ticket_count.length);
-    if (ticket_count.length >= item.capacity) return next(new HttpError(400, `Event is sold out. All ${item.capacity} tickets have been purchased`));
+    if (ticket_count.length  >= item.capacity) return next(new HttpError(400, `Event is sold out. All ${item.capacity} tickets have been purchased`));
+    if (ticket_count.length + dto.amount > item.capacity) return next(new HttpError(400, `You trying to buy more tickets that curently availaible`));
 
+    const created: Ticket[] = [];
 
-    const e: Ticket = {
+    for (let i = 0; i < dto.amount; i++) {
+      const e: Ticket = {
         id: randomUUID(),
         eventId: dto.eventId,
         email: dto.email,
         purchaseDate: new Date(),
         name: item.name,
         date: item.date,
-        ticketPrice: item.ticketPrice,
-        };
-
-        ticketStore.create(e);
-
-    res.status(201).json(e);
+        ticketPrice: get_ticket_price(ticket_count.length,item.ticketPrice, dto.amount),
+      };
+      ticketStore.create(e);
+      created.push(e);
+    }
+    res.status(201).json({ tickets: created });
   }
 );
 

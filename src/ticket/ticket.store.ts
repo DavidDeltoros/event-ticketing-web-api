@@ -1,6 +1,7 @@
 import { Ticket } from "./ticket.types";
 import { eventStore } from "../event/event.store";
 import { HttpError } from "../lib/errors";
+import { number } from "zod";
 
 // In-memory store (simple repository)
 class TicketStore {
@@ -15,7 +16,7 @@ class TicketStore {
     }
 
 
-    get_event_list(eventId: string) {
+    get_event_list(eventId: string){
     const eventExists = eventStore.get(eventId);
     if (!eventExists) {
         throw new HttpError(404, "Event not found");
@@ -53,6 +54,7 @@ class TicketStore {
     delete(id: string): boolean {
         return this.data_ticket.delete(id);
     }
-}
+
+ }
 
 export const ticketStore = new TicketStore();

@@ -4,6 +4,7 @@ import { z } from "zod";
 export type Event = {
   id: string;
   name: string;
+  state:string;
   description?: string;
   date: Date;
   venue: string;
